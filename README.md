@@ -2,7 +2,7 @@
 
 ### Increase video resolution with an opensource machine learning algorithm for upscaling video image frames using an automated command line script.
 
-For details: http://technology.research-lab.ca/2020/10/
+For details: http://technology.research-lab.ca/2020/10/upscale-video-super-resolution-using-rbpn/
 
 ## Citations
 ```
