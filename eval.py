@@ -23,7 +23,7 @@ import pdb
 parser = argparse.ArgumentParser(description='PyTorch Super Res Example')
 parser.add_argument('--upscale_factor', type=int, default=4, help="super resolution upscale factor")
 parser.add_argument('--testBatchSize', type=int, default=1, help='testing batch size')
-parser.add_argument('--gpu_mode', type=bool, default=True)
+parser.add_argument('--gpu_mode', type=bool, default=True) # Use GPU or CPU
 parser.add_argument('--chop_forward', type=bool, default=False)
 parser.add_argument('--threads', type=int, default=1, help='number of threads for data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
@@ -31,7 +31,7 @@ parser.add_argument('--gpus', default=1, type=int, help='number of gpu')
 parser.add_argument('--data_dir', type=str, default='./Vid4')
 parser.add_argument('--file_list', type=str, default='foliage.txt')
 parser.add_argument('--other_dataset', type=bool, default=True, help="use other dataset than vimeo-90k")
-parser.add_argument('--future_frame', type=bool, default=True, help="use future frame")
+parser.add_argument('--future_frame', type=bool, default=True, help="use future frame") # Include future frames in frameset
 parser.add_argument('--nFrames', type=int, default=7)
 parser.add_argument('--model_type', type=str, default='RBPN')
 parser.add_argument('--residual', type=bool, default=False)
@@ -50,6 +50,8 @@ if cuda and not torch.cuda.is_available():
 torch.manual_seed(opt.seed)
 if cuda:
     torch.cuda.manual_seed(opt.seed)
+else:
+    torch.manual_seed(opt.seed)
 
 print('===> Loading datasets')
 test_set = get_test_set(opt.data_dir, opt.nFrames, opt.upscale_factor, opt.file_list, opt.other_dataset, opt.future_frame)
@@ -61,6 +63,8 @@ if opt.model_type == 'RBPN':
 
 if cuda:
     model = torch.nn.DataParallel(model, device_ids=gpus_list)
+else:
+    model = torch.nn.DataParallel(model, device_ids=['cpu'])
 
 model.load_state_dict(torch.load(opt.model, map_location=lambda storage, loc: storage))
 print('Pre-trained SR model is loaded.')
@@ -76,10 +80,16 @@ def eval():
         input, target, neigbor, flow, bicubic = batch[0], batch[1], batch[2], batch[3], batch[4]
         
         with torch.no_grad():
-            input = Variable(input).cuda(gpus_list[0])
-            bicubic = Variable(bicubic).cuda(gpus_list[0])
-            neigbor = [Variable(j).cuda(gpus_list[0]) for j in neigbor]
-            flow = [Variable(j).cuda(gpus_list[0]).float() for j in flow]
+            if cuda:
+                input = Variable(input).cuda(gpus_list[0])
+                bicubic = Variable(bicubic).cuda(gpus_list[0])
+                neigbor = [Variable(j).cuda(gpus_list[0]) for j in neigbor]
+                flow = [Variable(j).cuda(gpus_list[0]).float() for j in flow]
+            else:
+                input = Variable(input)
+                bicubic = Variable(bicubic)
+                neigbor = [Variable(j) for j in neigbor]
+                flow = [Variable(j).float() for j in flow]
 
         t0 = time.time()
         if opt.chop_forward:
